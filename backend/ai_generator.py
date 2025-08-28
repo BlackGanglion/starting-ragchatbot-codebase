@@ -1,5 +1,20 @@
 import anthropic
+import httpx
+import os
 from typing import List, Optional, Dict, Any
+
+class CustomHTTPTransport(httpx.HTTPTransport):
+    """自定义HTTP传输，修改headers以适配代理"""
+    def __init__(self, api_key: str, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.api_key = api_key
+    
+    def handle_request(self, request):
+        # 移除默认的Authorization头，添加x-api-key
+        if 'authorization' in request.headers:
+            del request.headers['authorization']
+        request.headers['x-api-key'] = self.api_key
+        return super().handle_request(request)
 
 class AIGenerator:
     """Handles interactions with Anthropic's Claude API for generating responses"""
@@ -29,8 +44,29 @@ All responses must be:
 Provide only the direct answer to what was asked.
 """
     
-    def __init__(self, api_key: str, model: str):
-        self.client = anthropic.Anthropic(api_key=api_key)
+    def __init__(self, base_url: str, api_key: str, model: str):
+        print(base_url, api_key, model);
+        # 配置代理
+        proxy = os.environ.get('https_proxy') or os.environ.get('HTTPS_PROXY')
+        
+        # 创建自定义传输来处理header转换
+        transport_kwargs = {'verify': False}
+        if proxy:
+            transport_kwargs['proxy'] = httpx.Proxy(proxy)
+        
+        custom_transport = CustomHTTPTransport(api_key, **transport_kwargs)
+        
+        # 创建httpx客户端
+        http_client = httpx.Client(
+            transport=custom_transport,
+            headers={'anthropic-version': '2023-06-01'}
+        )
+        
+        self.client = anthropic.Anthropic(
+            base_url=base_url,
+            api_key=api_key,  # 这个会被我们的自定义transport替换
+            http_client=http_client
+        )
         self.model = model
         
         # Pre-build base API parameters

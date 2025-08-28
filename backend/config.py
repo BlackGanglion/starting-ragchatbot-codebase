@@ -9,8 +9,9 @@ load_dotenv()
 class Config:
     """Configuration settings for the RAG system"""
     # Anthropic API settings
-    ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
-    ANTHROPIC_MODEL: str = "claude-sonnet-4-20250514"
+    API_KEY: str = os.getenv("API_KEY", "")
+    BASE_URL: str = os.getenv("BASE_URL", "")
+    MODEL: str = "claude-sonnet-4-20250514"
     
     # Embedding model settings
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
